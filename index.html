@@ -717,6 +717,11 @@ async function initShared(){
     firebase.initializeApp(FIREBASE_CONFIG);
     authObj = firebase.auth();
     db = firebase.database();
+    authObj.getRedirectResult().catch(err => {
+      if(err && err.code && err.code !== "auth/null-user"){
+        $("login-msg").textContent = "הכניסה נכשלה - נסו שוב";
+      }
+    });
     authObj.onAuthStateChanged(user => {
       const email = user && user.email ? user.email.toLowerCase() : "";
       if(user && ADMIN_EMAILS.includes(email)) role = "admin";
@@ -759,8 +764,7 @@ function doLogin(){
   if(!authObj){ $("login-msg").textContent = "החיבור עדיין לא מוכן"; return; }
   $("login-msg").textContent = "";
   const provider = new firebase.auth.GoogleAuthProvider();
-  authObj.signInWithPopup(provider).catch(err => {
-    if(err && err.code === "auth/popup-closed-by-user") return;
+  authObj.signInWithRedirect(provider).catch(() => {
     $("login-msg").textContent = "הכניסה נכשלה - נסו שוב";
   });
 }
