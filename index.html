@@ -19,7 +19,7 @@
     padding:20px 14px 60px;
   }
   .wrap{max-width:760px; margin:0 auto;}
-  header{text-align:center; margin-bottom:22px;}
+  header{text-align:center; margin-bottom:14px;}
   header h1{font-weight:800; font-size:1.7rem; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:10px;}
   header p{color:var(--ink-soft); font-weight:300; margin-top:4px; font-size:.95rem;}
   .icon{width:1.2em; height:1.2em; flex:none;}
@@ -32,6 +32,23 @@
     background:var(--sky-1); color:var(--accent-dark); border-radius:999px;
     font-size:.8rem; padding:2px 10px; font-weight:500;
   }
+  .role-bar{display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .role-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--sky-2); border:1px solid #d8e6f0; color:var(--ink-soft);
+    border-radius:999px; padding:5px 14px; font-size:.82rem; font-weight:500;
+  }
+  .role-badge.admin{background:#eef7ee; border-color:#cde6cd; color:#2e6b34;}
+  .role-badge.picker{background:var(--sand); border-color:#e8dcc8; color:var(--earth-dark);}
+  .sessions{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;}
+  .session-tab{
+    border:1.5px solid #d8e6f0; background:var(--card); color:var(--ink-soft);
+    border-radius:999px; padding:7px 16px; font-family:inherit; font-size:.88rem; font-weight:500;
+    cursor:pointer; transition:all .15s;
+  }
+  .session-tab.active{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;}
+  .session-tab:disabled{cursor:default;}
+  .session-tab:not(.active):disabled{opacity:.75;}
   .pool{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
   .chip{
     display:inline-flex; align-items:center; gap:6px;
@@ -65,6 +82,8 @@
   .btn:active{transform:scale(.97);}
   .btn:disabled{opacity:.45; cursor:not-allowed;}
   .btn-add{background:var(--accent); color:#fff;}
+  .btn-google{background:#fff; border:1px solid #d8e6f0; color:var(--ink); width:100%;}
+  .btn-google:hover{background:var(--sky-2);}
   .btn-ghost{
     background:var(--sky-2); border:1px solid #d8e6f0; color:var(--ink-soft);
     font-weight:500; font-size:.82rem; border-radius:999px; padding:6px 16px;
@@ -130,6 +149,10 @@
   .picked-display .done{color:var(--earth-dark); font-weight:500;}
   .again-note{text-align:center; color:var(--ink-soft); font-size:.85rem; margin-top:14px;}
   .pool-empty{color:var(--ink-soft); font-size:.9rem; font-weight:300; padding:6px 2px;}
+  #login-panel{display:none; max-width:420px; margin:0 auto 16px; text-align:center;}
+  #login-panel .hint{font-size:.85rem; color:var(--ink-soft); margin-bottom:10px;}
+  #login-msg{text-align:center; font-size:.82rem; color:#b04a4a; min-height:18px; margin-top:6px;}
+  #sync-note{text-align:center; font-size:.8rem; color:var(--ink-soft); margin-bottom:12px; min-height:16px;}
 </style>
 </head>
 <body>
@@ -142,10 +165,29 @@
     <p>חלוקה אקראית לשתי קבוצות ובחירת משתתף מתוך כל קבוצה</p>
   </header>
 
-  <div class="card">
+  <div class="role-bar">
+    <span class="role-badge" id="role-badge">צופה</span>
+    <button class="btn btn-ghost" id="login-toggle">כניסת מפעיל</button>
+    <button class="btn btn-ghost" id="logout-btn" style="display:none">יציאה</button>
+  </div>
+
+  <div class="card" id="login-panel">
+    <p class="hint">כניסה למנהל ולבוחר בלבד. צופים לא צריכים כניסה.</p>
+    <button class="btn btn-google" id="login-btn">
+      <svg class="icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.26-2.09 3.57-5.16 3.57-8.81z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3c-1.07.72-2.44 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.29v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.27 14.28a7.2 7.2 0 0 1 0-4.56v-3.1H1.29a12 12 0 0 0 0 10.76l3.98-3.1z"/><path fill="#EA4335" d="M12 4.77c1.76 0 3.34.61 4.58 1.8l3.44-3.44A11.98 11.98 0 0 0 12 0 12 12 0 0 0 1.29 6.62l3.98 3.1C6.22 6.88 8.87 4.77 12 4.77z"/></svg>
+      התחברות עם Google
+    </button>
+    <div id="login-msg"></div>
+  </div>
+
+  <div id="sync-note"></div>
+
+  <div class="sessions" id="sessions"></div>
+
+  <div class="card" id="pool-card">
     <h2>רשימת המשתתפים <span class="count-badge" id="pool-count"></span></h2>
     <div class="pool" id="pool"></div>
-    <div class="add-row">
+    <div class="add-row" id="add-row">
       <input type="text" id="new-name" placeholder="הוספת שם..." autocomplete="off">
       <button class="btn btn-add" id="add-btn">הוסף</button>
     </div>
@@ -156,9 +198,8 @@
         <button class="btn btn-ghost" id="import-cancel">ביטול</button>
       </div>
     </div>
-    <div class="pool-links">
+    <div class="pool-links" id="pool-links">
       <button class="btn btn-ghost" id="import-toggle">ייבוא רשימה מלאה</button>
-      <button class="btn btn-ghost" id="reset-pool">שחזור רשימת ברירת מחדל</button>
     </div>
   </div>
 
@@ -210,98 +251,315 @@
     </div>
   </div>
 
-  <p class="again-note">אפשר לערבב מחדש בכל רגע - החלוקה והבחירות מתאפסות.</p>
+  <p class="again-note" id="again-note">אפשר לערבב מחדש בכל רגע - החלוקה והבחירות בסשן הנוכחי מתאפסות.</p>
 </div>
 
 <script>
-const DEFAULT_NAMES = [];
-const LS_KEY = "hagrala_pool_v1";
+"use strict";
+/* ================= configuration ================= */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD22lvyAO4zt5tCzhDf9kQdzOK3b_psVyA",
+  authDomain: "group-allocator-ca907.firebaseapp.com",
+  databaseURL: "https://group-allocator-ca907-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "group-allocator-ca907",
+  storageBucket: "group-allocator-ca907.firebasestorage.app",
+  messagingSenderId: "227634943375",
+  appId: "1:227634943375:web:19e42644995199004a67fa"
+};
+const ADMIN_EMAILS = ["idhadad@gmail.com", "eladhadad12@gmail.com"];
+const PICKER_EMAIL = "zack.pending@example.com"; // replaced with Zack's real Google email
+const DB_ROOT = "hagrala/state";
+const FIREBASE_CDN = "https://www.gstatic.com/firebasejs/10.12.2/";
+
+const SESSIONS = [
+  { id: "f1", label: "שישי 9:00-11:00" },
+  { id: "f2", label: "שישי 17:30-19:00" },
+  { id: "f3", label: "שישי 21:00" },
+  { id: "s1", label: "שבת 9:00-11:15" }
+];
+const LS_KEY = "hagrala_state_v2";
+const LS_KEY_V1 = "hagrala_pool_v1";
 const SHUFFLE_MS = 3000;
 
-let pool = loadPool();
-let groups = [[], []];              // arrays of {id, name}
-let picked = [new Set(), new Set()]; // member ids
-let nextId = 1;
+/* ================= state ================= */
+function emptySessionState(){ return { groups: { g1: {}, g2: {} }, picked: { g1: {}, g2: {} }, lastPick: { g1: null, g2: null }, idCounter: 1 }; }
+function freshState(){
+  const bySession = {};
+  SESSIONS.forEach(s => { bySession[s.id] = emptySessionState(); });
+  return { roster: [], noRepeat: true, activeSession: SESSIONS[0].id, bySession, transient: null };
+}
+
+let state = freshState();
+let shared = false;
+let role = "viewer";   // "admin" | "picker" | "viewer"  (local mode: "local")
 let busy = false;
-let shuffleTimer = null, pickTimer = null;
+let viewShuffleTimer = null, viewPickTimer = null;
+let db = null, authObj = null, seeded = false;
 
 const $ = id => document.getElementById(id);
 
-function loadPool(){
+function normState(raw){
+  const s = freshState();
+  if(Array.isArray(raw.roster)) s.roster = raw.roster.filter(x => typeof x === "string");
+  else if(raw.roster && typeof raw.roster === "object") s.roster = Object.values(raw.roster).filter(x => typeof x === "string");
+  if(typeof raw.noRepeat === "boolean") s.noRepeat = raw.noRepeat;
+  if(raw.activeSession && SESSIONS.some(x => x.id === raw.activeSession)) s.activeSession = raw.activeSession;
+  SESSIONS.forEach(sess => {
+    const r = raw.bySession && raw.bySession[sess.id];
+    if(!r) return;
+    const t = s.bySession[sess.id];
+    ["g1", "g2"].forEach(gi => {
+      const g = r.groups && r.groups[gi];
+      if(g && typeof g === "object"){
+        Object.keys(g).forEach(mid => {
+          const m = g[mid];
+          if(m && typeof m.name === "string") t.groups[gi][mid] = { name: m.name, o: typeof m.o === "number" ? m.o : 0 };
+        });
+      }
+      const p = r.picked && r.picked[gi];
+      if(p && typeof p === "object"){
+        Object.keys(p).forEach(mid => { if(p[mid] === true) t.picked[gi][mid] = true; });
+      }
+      const lp = r.lastPick && r.lastPick[gi];
+      t.lastPick[gi] = typeof lp === "string" ? lp : null;
+    });
+    if(typeof r.idCounter === "number") t.idCounter = r.idCounter;
+  });
+  s.transient = raw.transient && raw.transient.type ? raw.transient : null;
+  return s;
+}
+
+function cur(){ return state.bySession[state.activeSession]; }
+function membersOf(gi){
+  const g = cur().groups[gi];
+  return Object.keys(g).map(mid => ({ id: mid, name: g[mid].name, o: g[mid].o })).sort((a, b) => a.o - b.o);
+}
+function groupCount(gi){ return Object.keys(cur().groups[gi]).length; }
+function hasGroups(){ return groupCount("g1") + groupCount("g2") > 0; }
+function isPicked(gi, mid){ return state.noRepeat && cur().picked[gi][mid] === true; }
+function remainingOf(gi){ return membersOf(gi).filter(m => !(cur().picked[gi][m.id] === true)).length; }
+function exhausted(gi){
+  return state.noRepeat && groupCount(gi) > 0 && membersOf(gi).every(m => cur().picked[gi][m.id] === true);
+}
+
+/* ================= persistence (local fallback) ================= */
+function loadLocal(){
   try{
     const saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
-    if(Array.isArray(saved) && saved.length) return saved;
+    if(saved && saved.bySession){ state = normState(saved); return; }
   }catch(e){}
-  return [...DEFAULT_NAMES];
+  try{
+    const old = JSON.parse(localStorage.getItem(LS_KEY_V1) || "null");
+    if(Array.isArray(old) && old.length){ state.roster = old; saveLocal(); }
+  }catch(e){}
 }
-function savePool(){ localStorage.setItem(LS_KEY, JSON.stringify(pool)); }
+function saveLocal(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+/* ================= write path ================= */
+function push(patch){
+  if(shared && db){
+    const flat = {};
+    Object.keys(patch).forEach(k => { flat[DB_ROOT + "/" + k] = patch[k]; });
+    db.ref().update(flat).catch(err => {
+      $("sync-note").textContent = "שמירת השינוי נכשלה: " + (err && err.code === "PERMISSION_DENIED" ? "אין הרשאה לפעולה" : (err && err.message ? err.message : err));
+    });
+  }else{
+    Object.keys(patch).forEach(k => {
+      const parts = k.split("/");
+      let obj = state;
+      for(let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
+      if(patch[k] === null) delete obj[parts[parts.length - 1]];
+      else obj[parts[parts.length - 1]] = patch[k];
+    });
+    saveLocal();
+    renderAll();
+  }
+}
+
+/* ================= permissions ================= */
+function can(action){
+  if(!shared) return true;
+  if(role === "admin") return true;
+  if(role === "picker") return ["pick", "return", "restart"].includes(action);
+  return false;
+}
+
+/* ================= rendering ================= */
+function renderAll(){
+  renderRoleBar();
+  renderSessions();
+  renderPool();
+  renderSessionBody();
+  syncTransient();
+}
+
+function renderRoleBar(){
+  const b = $("role-badge");
+  b.className = "role-badge" + (role === "admin" ? " admin" : role === "picker" ? " picker" : "");
+  if(!shared && !FIREBASE_CONFIG){ b.textContent = "מצב מקומי - במכשיר זה בלבד"; }
+  else if(role === "admin"){ b.textContent = "מנהל - שליטה מלאה"; }
+  else if(role === "picker"){ b.textContent = "בוחר - בחירת אדם מתוך קבוצה"; }
+  else{ b.textContent = "צופה"; }
+  $("login-toggle").style.display = (role === "viewer") ? "" : "none";
+  $("logout-btn").style.display = (role === "admin" || role === "picker") ? "" : "none";
+  if(role !== "viewer") $("login-panel").style.display = "none";
+}
+
+function renderSessions(){
+  const box = $("sessions");
+  box.innerHTML = "";
+  SESSIONS.forEach(s => {
+    const t = document.createElement("button");
+    t.className = "session-tab" + (s.id === state.activeSession ? " active" : "");
+    t.textContent = s.label;
+    const maySwitch = can("session");
+    t.disabled = !maySwitch && s.id !== state.activeSession;
+    t.onclick = () => { if(can("session") && s.id !== state.activeSession) push({ activeSession: s.id }); };
+    box.appendChild(t);
+  });
+}
 
 function renderPool(){
   const el = $("pool");
   el.innerHTML = "";
-  if(!pool.length){
+  const mayEdit = can("roster");
+  if(!state.roster.length){
     const d = document.createElement("div");
     d.className = "pool-empty";
-    d.textContent = "הרשימה ריקה - הוסיפו שמות או ייבאו רשימה מלאה";
+    d.textContent = mayEdit ? "הרשימה ריקה - הוסיפו שמות או ייבאו רשימה מלאה" : "הרשימה טרם הוזנה";
     el.appendChild(d);
   }
-  pool.forEach((name, i) => {
+  state.roster.forEach((name, i) => {
     const chip = document.createElement("span");
     chip.className = "chip";
     const t = document.createElement("span");
     t.textContent = name;
     chip.appendChild(t);
-    const x = document.createElement("button");
-    x.textContent = "×";
-    x.title = "הסר " + name;
-    x.onclick = () => { pool.splice(i,1); savePool(); renderPool(); invalidateGroups(); };
-    chip.appendChild(x);
+    if(mayEdit){
+      const x = document.createElement("button");
+      x.textContent = "×";
+      x.title = "הסר " + name;
+      x.onclick = () => removeName(i);
+      chip.appendChild(x);
+    }
     el.appendChild(chip);
   });
-  $("pool-count").textContent = pool.length + " משתתפים";
-  $("shuffle-btn").disabled = busy || pool.length < 2;
-  $("reset-pool").style.display = DEFAULT_NAMES.length ? "" : "none";
+  $("pool-count").textContent = state.roster.length + " משתתפים";
+  $("add-row").style.display = mayEdit ? "" : "none";
+  $("pool-links").style.display = mayEdit ? "" : "none";
+  $("shuffle-btn").style.display = can("shuffle") ? "" : "none";
+  $("shuffle-btn").disabled = busy || state.roster.length < 2;
+  $("no-repeat").checked = state.noRepeat;
+  $("no-repeat").disabled = !can("options");
+  $("again-note").style.display = can("shuffle") ? "" : "none";
 }
 
+function renderSessionBody(){
+  const shuffling = state.transient && state.transient.type === "shuffle";
+  if(shuffling){
+    $("shuffle-stage").style.display = "block";
+    $("groups").style.display = "none";
+  }else{
+    $("shuffle-stage").style.display = "none";
+    $("groups").style.display = hasGroups() ? "grid" : "none";
+  }
+  if(hasGroups() && !shuffling){ renderGroup("g1"); renderGroup("g2"); }
+  renderPickDisplay("g1");
+  renderPickDisplay("g2");
+  $("shuffle-label").textContent = hasGroups() ? "ערבב מחדש" : "ערבב וחלק לקבוצות";
+}
+
+function renderGroup(gi){
+  const list = $(gi + "-list");
+  list.innerHTML = "";
+  const mayOperate = can("return");
+  membersOf(gi).forEach((m, i) => {
+    const d = document.createElement("div");
+    const picked = isPicked(gi, m.id);
+    d.className = "member" + (picked ? " picked-dim" : "");
+    d.dataset.mid = m.id;
+    d.style.animationDelay = (i * 60) + "ms";
+    const t = document.createElement("span");
+    t.className = "mname";
+    t.textContent = m.name;
+    d.appendChild(t);
+    if(picked && mayOperate){
+      const r = document.createElement("button");
+      r.className = "mreturn";
+      r.textContent = "החזר לבחירה";
+      r.onclick = () => returnMember(gi, m.id);
+      d.appendChild(r);
+    }
+    list.appendChild(d);
+  });
+  $(gi + "-count").textContent = groupCount(gi) + " משתתפים";
+  const pickBtn = $("pick-" + gi);
+  const restartBtn = $("restart-" + gi);
+  if(can("pick")){
+    pickBtn.style.display = exhausted(gi) ? "none" : "";
+    pickBtn.disabled = busy;
+    restartBtn.style.display = exhausted(gi) ? "flex" : "none";
+  }else{
+    pickBtn.style.display = "none";
+    restartBtn.style.display = "none";
+  }
+}
+
+function renderPickDisplay(gi){
+  const display = $("picked-" + gi);
+  if(exhausted(gi)){
+    display.innerHTML = '<span class="done">כל ' + groupCount(gi) + ' חברי הקבוצה נבחרו</span>';
+    return;
+  }
+  const lpId = cur().lastPick[gi];
+  const lpName = lpId && cur().groups[gi][lpId] ? cur().groups[gi][lpId].name : null;
+  if(lpName){
+    display.innerHTML = "נבחר: <strong></strong>" +
+      (state.noRepeat ? '<br><span class="done">נותרו ' + remainingOf(gi) + ' שלא נבחרו</span>' : "");
+    display.querySelector("strong").textContent = lpName;
+  }else{
+    display.innerHTML = "";
+  }
+}
+
+/* ================= roster edits (admin) ================= */
+function clearedSessions(){
+  const out = {};
+  SESSIONS.forEach(s => { out["bySession/" + s.id] = emptySessionState(); });
+  out["transient"] = null;
+  return out;
+}
+function removeName(i){
+  if(!can("roster")) return;
+  stopAnims();
+  const roster = state.roster.slice();
+  roster.splice(i, 1);
+  push(Object.assign({ roster }, clearedSessions()));
+}
 function addName(){
+  if(!can("roster")) return;
   const input = $("new-name");
   const v = input.value.trim();
   if(!v) return;
-  pool.push(v);
-  savePool();
+  stopAnims();
+  push(Object.assign({ roster: state.roster.concat([v]) }, clearedSessions()));
   input.value = "";
-  renderPool();
-  invalidateGroups();
 }
-
 function importList(){
+  if(!can("roster")) return;
   const lines = $("import-text").value.split("\n").map(s => s.trim()).filter(Boolean);
   if(!lines.length) return;
-  pool = lines;
-  savePool();
+  stopAnims();
+  push(Object.assign({ roster: lines }, clearedSessions()));
   $("import-text").value = "";
   $("import-block").style.display = "none";
-  renderPool();
-  invalidateGroups();
 }
 
-// A pool edit makes an existing split stale - clear it.
-function invalidateGroups(){
-  if(shuffleTimer){ clearInterval(shuffleTimer); shuffleTimer = null; }
-  if(pickTimer){ clearInterval(pickTimer); pickTimer = null; }
+/* ================= animations ================= */
+function stopAnims(){
+  [viewShuffleTimer, viewPickTimer].forEach(t => { if(t) clearInterval(t); });
+  viewShuffleTimer = viewPickTimer = null;
   busy = false;
-  groups = [[], []];
-  picked = [new Set(), new Set()];
-  $("groups").style.display = "none";
-  $("shuffle-stage").style.display = "none";
-  $("picked-g1").innerHTML = "";
-  $("picked-g2").innerHTML = "";
-  $("restart-g1").style.display = "none";
-  $("restart-g2").style.display = "none";
-  $("pick-g1").style.display = "";
-  $("pick-g2").style.display = "";
-  $("shuffle-label").textContent = "ערבב וחלק לקבוצות";
-  $("shuffle-btn").disabled = pool.length < 2;
 }
 
 function shuffle(arr){
@@ -313,175 +571,202 @@ function shuffle(arr){
   return a;
 }
 
-function splitIntoGroups(){
-  const members = shuffle(pool).map(name => ({id: nextId++, name}));
+function splitIntoGroups(roster, startId){
+  const order = shuffle(roster);
+  const members = order.map((name, i) => ({ id: "m" + (startId + i), name }));
   const half = Math.ceil(members.length / 2);
   let a = members.slice(0, half);
   let b = members.slice(half);
-  // odd count: randomly decide which group gets the extra member
-  if(members.length % 2 === 1 && Math.random() < 0.5){
-    [a, b] = [b, a];
-  }
-  return [a, b];
+  if(members.length % 2 === 1 && Math.random() < 0.5){ [a, b] = [b, a]; }
+  const groups = { g1: {}, g2: {} };
+  a.forEach((m, i) => { groups.g1[m.id] = { name: m.name, o: i }; });
+  b.forEach((m, i) => { groups.g2[m.id] = { name: m.name, o: i }; });
+  return groups;
 }
 
-function runShuffle(){
-  if(busy || pool.length < 2) return;
-  busy = true;
-  $("shuffle-btn").disabled = true;
-  $("groups").style.display = "none";
-  $("restart-g1").style.display = "none";
-  $("restart-g2").style.display = "none";
-  $("pick-g1").style.display = "";
-  $("pick-g2").style.display = "";
-  const stage = $("shuffle-stage");
+function animateShuffleChips(){
+  if(viewShuffleTimer) return;
   const chipsBox = $("shuffle-chips");
-  stage.style.display = "block";
-  stage.scrollIntoView({behavior:"smooth", block:"center"});
-
-  const names = [...pool];
-  const tickMs = 90;
-  let elapsed = 0;
-
-  shuffleTimer = setInterval(() => {
-    const order = shuffle(names);
+  const names = [...state.roster];
+  if(!names.length) return;
+  viewShuffleTimer = setInterval(() => {
+    if(!(state.transient && state.transient.type === "shuffle")){
+      clearInterval(viewShuffleTimer); viewShuffleTimer = null; return;
+    }
+    const ord = shuffle(names);
     chipsBox.innerHTML = "";
-    const hotIdx = Math.floor(Math.random() * order.length);
-    order.forEach((n, i) => {
+    const hotIdx = Math.floor(Math.random() * ord.length);
+    ord.forEach((n, i) => {
       const c = document.createElement("span");
       c.className = "chip" + (i === hotIdx ? " hot" : "");
       c.textContent = n;
       chipsBox.appendChild(c);
     });
-    elapsed += tickMs;
-    if(elapsed >= SHUFFLE_MS){
-      clearInterval(shuffleTimer);
-      shuffleTimer = null;
-      finishSplit();
-    }
-  }, tickMs);
+  }, 90);
 }
 
-function finishSplit(){
-  groups = splitIntoGroups();
-  picked = [new Set(), new Set()];
-  $("shuffle-stage").style.display = "none";
-  renderGroup(0);
-  renderGroup(1);
-  $("picked-g1").innerHTML = "";
-  $("picked-g2").innerHTML = "";
-  const g = $("groups");
-  g.style.display = "grid";
-  g.scrollIntoView({behavior:"smooth", block:"start"});
-  $("shuffle-btn").disabled = false;
-  $("shuffle-label").textContent = "ערבב מחדש";
-  busy = false;
-}
-
-function renderGroup(gi){
-  const list = $("g" + (gi+1) + "-list");
-  list.innerHTML = "";
-  const noRepeat = $("no-repeat").checked;
-  groups[gi].forEach((m, i) => {
-    const d = document.createElement("div");
-    const isPicked = picked[gi].has(m.id) && noRepeat;
-    d.className = "member" + (isPicked ? " picked-dim" : "");
-    d.dataset.mid = m.id;
-    d.style.animationDelay = (i * 60) + "ms";
-    const t = document.createElement("span");
-    t.className = "mname";
-    t.textContent = m.name;
-    d.appendChild(t);
-    if(isPicked){
-      // someone who was picked can be returned to the group's eligible pool
-      const r = document.createElement("button");
-      r.className = "mreturn";
-      r.textContent = "החזר לבחירה";
-      r.onclick = () => returnMember(gi, m.id);
-      d.appendChild(r);
-    }
-    list.appendChild(d);
-  });
-  $("g" + (gi+1) + "-count").textContent = groups[gi].length + " משתתפים";
-}
-
-function returnMember(gi, id){
-  picked[gi].delete(id);
-  renderGroup(gi);
-  $("picked-g" + (gi+1)).innerHTML = "";
-  $("restart-g" + (gi+1)).style.display = "none";
-  $("pick-g" + (gi+1)).style.display = "";
+function runShuffle(){
+  if(!can("shuffle") || busy || state.roster.length < 2) return;
+  busy = true;
+  const sid = state.activeSession;
+  push({ transient: { type: "shuffle", session: sid, at: Date.now() } });
+  $("shuffle-stage").scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => {
+    const s = state.bySession[sid];
+    const groups = splitIntoGroups(state.roster, s.idCounter);
+    const patch = {};
+    patch["bySession/" + sid + "/groups"] = groups;
+    patch["bySession/" + sid + "/picked"] = null;
+    patch["bySession/" + sid + "/lastPick"] = null;
+    patch["bySession/" + sid + "/idCounter"] = s.idCounter + state.roster.length;
+    patch["transient"] = null;
+    busy = false;
+    push(patch);
+    if(!shared){ $("groups").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  }, SHUFFLE_MS);
 }
 
 function pickFrom(gi){
-  if(busy || !groups[gi].length) return;
-  const noRepeat = $("no-repeat").checked;
-  let candidates = groups[gi];
-  if(noRepeat){
-    candidates = groups[gi].filter(m => !picked[gi].has(m.id));
-    if(!candidates.length) return; // exhausted - restart button is showing
+  if(!can("pick") || busy) return;
+  const s = cur();
+  if(!groupCount(gi)) return;
+  let candidates = membersOf(gi);
+  if(state.noRepeat){
+    candidates = candidates.filter(m => !(s.picked[gi][m.id] === true));
+    if(!candidates.length) return;
   }
   busy = true;
-  const list = $("g" + (gi+1) + "-list");
-  const nodes = [...list.children];
-  const display = $("picked-g" + (gi+1));
-  display.innerHTML = "";
+  const winner = candidates[Math.floor(Math.random() * candidates.length)];
+  const sid = state.activeSession;
+  push({ transient: { type: "pick", gi, session: sid, at: Date.now() } });
+  setTimeout(() => {
+    const patch = {};
+    if(state.noRepeat) patch["bySession/" + sid + "/picked/" + gi + "/" + winner.id] = true;
+    patch["bySession/" + sid + "/lastPick/" + gi] = winner.id;
+    patch["transient"] = null;
+    busy = false;
+    push(patch);
+    flashWinner(gi, winner.id);
+  }, 1500);
+}
 
-  const cycleMs = 110;
-  const cycles = 12 + Math.floor(Math.random() * 4);
-  let step = 0;
-  pickTimer = setInterval(() => {
-    nodes.forEach(n => n.classList.remove("cycling"));
-    const idx = Math.floor(Math.random() * nodes.length);
-    nodes[idx].classList.add("cycling");
-    step++;
-    if(step >= cycles){
-      clearInterval(pickTimer);
-      pickTimer = null;
-      nodes.forEach(n => n.classList.remove("cycling"));
-      const winner = candidates[Math.floor(Math.random() * candidates.length)];
-      const winnerNode = nodes.find(n => +n.dataset.mid === winner.id);
-      if(winnerNode) winnerNode.classList.add("winner");
-      if(noRepeat) picked[gi].add(winner.id);
-      const remaining = groups[gi].filter(m => !picked[gi].has(m.id)).length;
-      display.innerHTML = "נבחר: <strong></strong>" +
-        (noRepeat ? '<br><span class="done">נותרו ' + remaining + ' שלא נבחרו</span>' : "");
-      display.querySelector("strong").textContent = winner.name;
-      setTimeout(() => {
-        if(winnerNode){
-          winnerNode.classList.remove("winner");
-          if(noRepeat){
-            winnerNode.classList.add("picked-dim");
-            // add a return option on the picked row without full re-render
-            if(!winnerNode.querySelector(".mreturn")){
-              const r = document.createElement("button");
-              r.className = "mreturn";
-              r.textContent = "החזר לבחירה";
-              r.onclick = () => returnMember(gi, winner.id);
-              winnerNode.appendChild(r);
-            }
-          }
-        }
-        if(noRepeat && remaining === 0){
-          // exhausted: show all picked + explicit restart action, no silent reset
-          display.innerHTML = '<span class="done">כל ' + groups[gi].length + ' חברי הקבוצה נבחרו</span>';
-          $("pick-g" + (gi+1)).style.display = "none";
-          $("restart-g" + (gi+1)).style.display = "flex";
-        }
-      }, 2500);
-      busy = false;
+function flashWinner(gi, mid){
+  setTimeout(() => {
+    const node = [...$(gi + "-list").children].find(n => String(n.dataset.mid) === String(mid));
+    if(node){
+      node.classList.add("winner");
+      setTimeout(() => node.classList.remove("winner"), 2500);
     }
-  }, cycleMs);
+  }, 60);
+}
+
+function animatePickCycling(gi){
+  if(viewPickTimer) return;
+  const list = $(gi + "-list");
+  const nodes = [...list.children];
+  if(!nodes.length) return;
+  viewPickTimer = setInterval(() => {
+    if(!(state.transient && state.transient.type === "pick")){
+      clearInterval(viewPickTimer); viewPickTimer = null;
+      nodes.forEach(n => n.classList.remove("cycling")); return;
+    }
+    nodes.forEach(n => n.classList.remove("cycling"));
+    nodes[Math.floor(Math.random() * nodes.length)].classList.add("cycling");
+  }, 110);
+}
+
+function syncTransient(){
+  const t = state.transient;
+  if(t && t.type === "shuffle") animateShuffleChips();
+  if(t && t.type === "pick") animatePickCycling(t.gi);
+}
+
+function returnMember(gi, id){
+  if(!can("return")) return;
+  const patch = {};
+  patch["bySession/" + state.activeSession + "/picked/" + gi + "/" + id] = null;
+  if(cur().lastPick[gi] === id) patch["bySession/" + state.activeSession + "/lastPick/" + gi] = null;
+  push(patch);
 }
 
 function restartRound(gi){
-  picked[gi].clear();
-  renderGroup(gi);
-  $("picked-g" + (gi+1)).innerHTML = "";
-  $("restart-g" + (gi+1)).style.display = "none";
-  $("pick-g" + (gi+1)).style.display = "";
+  if(!can("restart")) return;
+  const sid = state.activeSession;
+  const patch = {};
+  Object.keys(cur().picked[gi]).forEach(mid => { patch["bySession/" + sid + "/picked/" + gi + "/" + mid] = null; });
+  patch["bySession/" + sid + "/lastPick/" + gi] = null;
+  push(patch);
 }
 
+/* ================= firebase ================= */
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const el = document.createElement("script");
+    el.src = src; el.onload = res; el.onerror = rej;
+    document.head.appendChild(el);
+  });
+}
+
+async function initShared(){
+  if(!FIREBASE_CONFIG) return;
+  try{
+    await loadScript(FIREBASE_CDN + "firebase-app-compat.js");
+    await loadScript(FIREBASE_CDN + "firebase-auth-compat.js");
+    await loadScript(FIREBASE_CDN + "firebase-database-compat.js");
+    firebase.initializeApp(FIREBASE_CONFIG);
+    authObj = firebase.auth();
+    db = firebase.database();
+    authObj.onAuthStateChanged(user => {
+      const email = user && user.email ? user.email.toLowerCase() : "";
+      if(user && ADMIN_EMAILS.includes(email)) role = "admin";
+      else if(user && email === PICKER_EMAIL) role = "picker";
+      else role = "viewer";
+      startSync();
+      renderAll();
+    });
+  }catch(e){
+    $("sync-note").textContent = "החיבור למצב המשותף נכשל - פועל במצב מקומי";
+    loadLocal();
+    renderAll();
+  }
+}
+
+let syncStarted = false;
+function startSync(){
+  if(syncStarted || !db) return;
+  syncStarted = true;
+  db.ref(DB_ROOT).on("value", snap => {
+    const raw = snap.val();
+    shared = true;
+    state = raw ? normState(raw) : freshState();
+    if(!raw && !seeded && role === "admin"){
+      seeded = true;
+      const s = freshState();
+      const flat = {};
+      flat["roster"] = s.roster;
+      flat["noRepeat"] = s.noRepeat;
+      flat["activeSession"] = s.activeSession;
+      SESSIONS.forEach(sess => { flat["bySession/" + sess.id] = s.bySession[sess.id]; });
+      push(flat);
+    }
+    renderAll();
+  }, () => {
+    $("sync-note").textContent = "בעיית חיבור למצב המשותף";
+  });
+}
+
+function doLogin(){
+  if(!authObj){ $("login-msg").textContent = "החיבור עדיין לא מוכן"; return; }
+  $("login-msg").textContent = "";
+  const provider = new firebase.auth.GoogleAuthProvider();
+  authObj.signInWithPopup(provider).catch(err => {
+    if(err && err.code === "auth/popup-closed-by-user") return;
+    $("login-msg").textContent = "הכניסה נכשלה - נסו שוב";
+  });
+}
+function doLogout(){ if(authObj) authObj.signOut(); }
+
+/* ================= wiring ================= */
 $("add-btn").onclick = addName;
 $("new-name").addEventListener("keydown", e => { if(e.key === "Enter") addName(); });
 $("import-toggle").onclick = () => {
@@ -490,15 +775,23 @@ $("import-toggle").onclick = () => {
 };
 $("import-cancel").onclick = () => { $("import-block").style.display = "none"; };
 $("import-btn").onclick = importList;
-$("reset-pool").onclick = () => { pool = [...DEFAULT_NAMES]; savePool(); renderPool(); invalidateGroups(); };
 $("shuffle-btn").onclick = runShuffle;
-$("pick-g1").onclick = () => pickFrom(0);
-$("pick-g2").onclick = () => pickFrom(1);
-$("restart-g1").onclick = () => restartRound(0);
-$("restart-g2").onclick = () => restartRound(1);
-$("no-repeat").onchange = () => { renderGroup(0); renderGroup(1); };
+$("pick-g1").onclick = () => pickFrom("g1");
+$("pick-g2").onclick = () => pickFrom("g2");
+$("restart-g1").onclick = () => restartRound("g1");
+$("restart-g2").onclick = () => restartRound("g2");
+$("no-repeat").onchange = e => { if(can("options")) push({ noRepeat: e.target.checked }); };
+$("login-toggle").onclick = () => {
+  const p = $("login-panel");
+  p.style.display = p.style.display === "block" ? "none" : "block";
+};
+$("login-btn").onclick = doLogin;
+$("logout-btn").onclick = doLogout;
 
-renderPool();
+/* ================= boot ================= */
+if(!FIREBASE_CONFIG){ loadLocal(); role = "local"; }
+renderAll();
+initShared();
 </script>
 </body>
 </html>
