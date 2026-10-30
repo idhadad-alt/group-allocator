@@ -743,7 +743,7 @@ function returnMember(gi, id){
     // Transaction so a concurrent pick committed meanwhile is never erased
     const selRef = db.ref(DB_ROOT + "/bySession/" + state.activeSession + "/selection/" + gi);
     selRef.transaction(sel => {
-      if(!sel || typeof sel !== "object") return;             // nothing to return
+      if(!sel || typeof sel !== "object") return null;        // retry if remote state exists
       if(!sel.picked || sel.picked[id] !== true) return;      // not currently picked: no-op
       delete sel.picked[id];
       if(sel.lastPick === id || !(sel.picked && sel.picked[sel.lastPick])) sel.lastPick = null;
