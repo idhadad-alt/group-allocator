@@ -641,13 +641,19 @@ function pickFrom(gi){
   const sid = state.activeSession;
   push({ transient: { type: "pick", gi, session: sid, at: Date.now() } });
   setTimeout(() => {
-    const patch = {};
-    patch["bySession/" + sid + "/picked/" + gi + "/" + winner.id] = true;
-    patch["bySession/" + sid + "/lastPick/" + gi] = winner.id;
-    patch["transient"] = null;
+    // two-phase: rules validate lastPick against the picked flag in the
+    // pre-write state, so the flag must land first
+    const p1 = {};
+    p1["bySession/" + sid + "/picked/" + gi + "/" + winner.id] = true;
+    p1["transient"] = null;
+    push(p1);
     busy = false;
-    push(patch);
-    flashWinner(gi, winner.id);
+    setTimeout(() => {
+      const p2 = {};
+      p2["bySession/" + sid + "/lastPick/" + gi] = winner.id;
+      push(p2);
+      flashWinner(gi, winner.id);
+    }, 250);
   }, 1500);
 }
 
@@ -764,7 +770,14 @@ function doLogin(){
   if(!authObj){ $("login-msg").textContent = "החיבור עדיין לא מוכן"; return; }
   $("login-msg").textContent = "";
   const provider = new firebase.auth.GoogleAuthProvider();
-  authObj.signInWithRedirect(provider).catch(() => {
+  authObj.signInWithPopup(provider).catch(err => {
+    if(err && err.code === "auth/popup-closed-by-user") return;
+    if(err && (err.code === "auth/popup-blocked" || err.code === "auth/operation-not-supported-in-this-environment" || err.code === "auth/web-storage-unsupported")){
+      authObj.signInWithRedirect(provider).catch(() => {
+        $("login-msg").textContent = "הכניסה נכשלה - נסו שוב";
+      });
+      return;
+    }
     $("login-msg").textContent = "הכניסה נכשלה - נסו שוב";
   });
 }
