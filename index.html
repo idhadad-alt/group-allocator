@@ -266,8 +266,8 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "227634943375",
   appId: "1:227634943375:web:19e42644995199004a67fa"
 };
-const ADMIN_EMAILS = ["idhadad@gmail.com", "eladhadad12@gmail.com"];
-const PICKER_EMAIL = "zack.pending@example.com"; // replaced with Zack's real Google email
+const ADMIN_EMAILS = ["idhadad@gmail.com"];
+const PICKER_EMAIL = "picker-not-configured@example.invalid"; // replaced with Zack's real Google email when known
 const DB_ROOT = "hagrala/state";
 const FIREBASE_CDN = "https://www.gstatic.com/firebasejs/10.12.2/";
 
@@ -378,7 +378,8 @@ function push(patch){
 
 /* ================= permissions ================= */
 function can(action){
-  if(!shared) return true;
+  if(!FIREBASE_CONFIG) return true;   // pure offline build only
+  if(!shared) return false;           // sync not up: fail closed (read-only)
   if(role === "admin") return true;
   if(role === "picker") return ["pick", "return", "restart"].includes(action);
   return false;
@@ -641,7 +642,7 @@ function pickFrom(gi){
   push({ transient: { type: "pick", gi, session: sid, at: Date.now() } });
   setTimeout(() => {
     const patch = {};
-    if(state.noRepeat) patch["bySession/" + sid + "/picked/" + gi + "/" + winner.id] = true;
+    patch["bySession/" + sid + "/picked/" + gi + "/" + winner.id] = true;
     patch["bySession/" + sid + "/lastPick/" + gi] = winner.id;
     patch["transient"] = null;
     busy = false;
@@ -725,8 +726,7 @@ async function initShared(){
       renderAll();
     });
   }catch(e){
-    $("sync-note").textContent = "החיבור למצב המשותף נכשל - פועל במצב מקומי";
-    loadLocal();
+    $("sync-note").textContent = "החיבור למצב המשותף נכשל - מצב צפייה בלבד";
     renderAll();
   }
 }
