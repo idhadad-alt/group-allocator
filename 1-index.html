@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מנגנון הגרלה - חלוקה לקבוצות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky-1:#dceefb; --sky-2:#f4f9fd; --sand:#f6efe3; --earth:#b0763f; --earth-dark:#8a5a2e;
+    --ink:#2e3a43; --ink-soft:#5c6b76; --card:#ffffff; --accent:#3a7ca5; --accent-dark:#2b5f80;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{
+    font-family:'Heebo',sans-serif; color:var(--ink); min-height:100vh;
+    background:linear-gradient(180deg,var(--sky-1) 0%,var(--sky-2) 45%,var(--sand) 100%);
+    padding:20px 14px 60px;
+  }
+  .wrap{max-width:760px; margin:0 auto;}
+  header{text-align:center; margin-bottom:22px;}
+  header h1{font-weight:800; font-size:1.7rem; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:10px;}
+  header p{color:var(--ink-soft); font-weight:300; margin-top:4px; font-size:.95rem;}
+  .icon{width:1.2em; height:1.2em; flex:none;}
+  .card{
+    background:var(--card); border-radius:18px; padding:18px;
+    box-shadow:0 6px 24px rgba(46,58,67,.08); margin-bottom:16px;
+  }
+  .card h2{font-size:1.05rem; font-weight:700; display:flex; align-items:center; gap:8px; margin-bottom:12px;}
+  .count-badge{
+    background:var(--sky-1); color:var(--accent-dark); border-radius:999px;
+    font-size:.8rem; padding:2px 10px; font-weight:500;
+  }
+  .pool{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
+  .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--sky-2); border:1px solid #d8e6f0; border-radius:999px;
+    padding:6px 12px; font-size:.92rem; font-weight:500;
+    transition:transform .12s ease, background .3s, opacity .3s;
+  }
+  .chip button{
+    border:none; background:none; color:#b04a4a; font-size:1rem; line-height:1;
+    cursor:pointer; padding:0 2px; font-weight:700; font-family:inherit;
+  }
+  .add-row{display:flex; gap:8px;}
+  .add-row input{
+    flex:1; border:1px solid #d8e6f0; border-radius:12px; padding:10px 14px;
+    font-family:inherit; font-size:.95rem; background:var(--sky-2); color:var(--ink);
+  }
+  .add-row input:focus{outline:2px solid var(--accent); background:#fff;}
+  .import-block{display:none; margin-top:10px;}
+  .import-block textarea{
+    width:100%; min-height:110px; border:1px solid #d8e6f0; border-radius:12px;
+    padding:10px 14px; font-family:inherit; font-size:.92rem; background:var(--sky-2);
+    color:var(--ink); resize:vertical;
+  }
+  .import-block textarea:focus{outline:2px solid var(--accent); background:#fff;}
+  .import-actions{display:flex; gap:8px; margin-top:8px; justify-content:center;}
+  .btn{
+    border:none; border-radius:12px; padding:10px 18px; font-family:inherit;
+    font-size:.95rem; font-weight:700; cursor:pointer; transition:transform .1s, box-shadow .2s, opacity .2s;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+  .btn-add{background:var(--accent); color:#fff;}
+  .btn-ghost{
+    background:var(--sky-2); border:1px solid #d8e6f0; color:var(--ink-soft);
+    font-weight:500; font-size:.82rem; border-radius:999px; padding:6px 16px;
+  }
+  .btn-ghost:hover{background:#e8f1f8; color:var(--ink);}
+  .pool-links{display:flex; gap:10px; justify-content:center; margin-top:10px; flex-wrap:wrap;}
+  .big-action{
+    width:100%; padding:16px; font-size:1.15rem; border-radius:16px;
+    background:linear-gradient(135deg,var(--earth) 0%,var(--earth-dark) 100%); color:#fff;
+    box-shadow:0 8px 20px rgba(138,90,46,.3); margin-bottom:16px;
+  }
+  .options{display:flex; align-items:center; gap:8px; justify-content:center; margin-bottom:16px; color:var(--ink-soft); font-size:.88rem;}
+  .options input{width:18px; height:18px; accent-color:var(--earth);}
+  #shuffle-stage{
+    display:none; background:var(--card); border-radius:18px; padding:22px 16px;
+    box-shadow:0 6px 24px rgba(46,58,67,.08); margin-bottom:16px; text-align:center;
+    min-height:140px;
+  }
+  #shuffle-stage .status{font-weight:700; color:var(--earth-dark); margin-bottom:14px;}
+  #shuffle-chips{display:flex; flex-wrap:wrap; gap:8px; justify-content:center;}
+  #shuffle-chips .chip{background:var(--sand); border-color:#e8dcc8;}
+  #shuffle-chips .chip.hot{background:var(--earth); color:#fff; transform:scale(1.12);}
+  #groups{display:none; grid-template-columns:1fr 1fr; gap:14px;}
+  @media (max-width:560px){ #groups{grid-template-columns:1fr;} }
+  .group-card{border-top:5px solid var(--accent);}
+  .group-card.g2{border-top-color:var(--earth);}
+  .group-card h2 .gname{flex:1;}
+  .member{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 12px; border-radius:12px; margin-bottom:7px; font-weight:500;
+    background:var(--sky-2); border:1px solid #e2ecf3; font-size:.95rem;
+    animation:pop .35s ease both; transition:background .3s, box-shadow .3s, opacity .3s;
+  }
+  .member .mname{flex:1;}
+  .g2 .member{background:var(--sand); border-color:#ece1cd;}
+  @keyframes pop{from{opacity:0; transform:translateY(10px) scale(.95);} to{opacity:1; transform:none;}}
+  .member.picked-dim .mname{opacity:.45; text-decoration:line-through;}
+  .mreturn{
+    border:1px dashed var(--earth); background:#fff; color:var(--earth-dark);
+    border-radius:999px; font-size:.75rem; font-weight:500; padding:2px 10px;
+    cursor:pointer; font-family:inherit; flex:none;
+  }
+  .mreturn:hover{background:var(--sand);}
+  .member.cycling{background:#ffe9c9; box-shadow:0 0 0 2px var(--earth) inset;}
+  .member.winner{
+    background:linear-gradient(135deg,#f3c87e,#e8a94f); color:#4a2f10;
+    box-shadow:0 4px 14px rgba(232,169,79,.5); animation:winpulse .5s ease;
+  }
+  .member.winner .mname{font-weight:800; opacity:1; text-decoration:none;}
+  @keyframes winpulse{0%{transform:scale(1);}40%{transform:scale(1.08);}100%{transform:scale(1);}}
+  .pick-row{margin-top:10px; display:flex; flex-direction:column; gap:8px;}
+  .btn-pick{width:100%; background:var(--accent); color:#fff;}
+  .g2 .btn-pick{background:var(--earth);}
+  .btn-restart{
+    width:100%; background:none; border:1.5px dashed var(--earth); color:var(--earth-dark);
+    display:none;
+  }
+  .btn-restart:hover{background:var(--sand);}
+  .picked-display{
+    text-align:center; font-size:.9rem; color:var(--ink-soft); min-height:24px; font-weight:400;
+  }
+  .picked-display strong{color:var(--ink); font-size:1.05rem; font-weight:800;}
+  .picked-display .done{color:var(--earth-dark); font-weight:500;}
+  .again-note{text-align:center; color:var(--ink-soft); font-size:.85rem; margin-top:14px;}
+  .pool-empty{color:var(--ink-soft); font-size:.9rem; font-weight:300; padding:6px 2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+      מנגנון הגרלה
+    </h1>
+    <p>חלוקה אקראית לשתי קבוצות ובחירת משתתף מתוך כל קבוצה</p>
+  </header>
+
+  <div class="card">
+    <h2>רשימת המשתתפים <span class="count-badge" id="pool-count"></span></h2>
+    <div class="pool" id="pool"></div>
+    <div class="add-row">
+      <input type="text" id="new-name" placeholder="הוספת שם..." autocomplete="off">
+      <button class="btn btn-add" id="add-btn">הוסף</button>
+    </div>
+    <div class="import-block" id="import-block">
+      <textarea id="import-text" placeholder="הדביקו כאן רשימה מלאה, שם אחד בכל שורה"></textarea>
+      <div class="import-actions">
+        <button class="btn btn-add" id="import-btn">ייבא והחלף רשימה</button>
+        <button class="btn btn-ghost" id="import-cancel">ביטול</button>
+      </div>
+    </div>
+    <div class="pool-links">
+      <button class="btn btn-ghost" id="import-toggle">ייבוא רשימה מלאה</button>
+      <button class="btn btn-ghost" id="reset-pool">שחזור רשימת ברירת מחדל</button>
+    </div>
+  </div>
+
+  <button class="btn big-action" id="shuffle-btn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+    <span id="shuffle-label">ערבב וחלק לקבוצות</span>
+  </button>
+
+  <div class="options">
+    <input type="checkbox" id="no-repeat" checked>
+    <label for="no-repeat">בחירת אדם ללא חזרות (עד שכולם נבחרו)</label>
+  </div>
+
+  <div id="shuffle-stage">
+    <div class="status">מערבב...</div>
+    <div id="shuffle-chips"></div>
+  </div>
+
+  <div id="groups">
+    <div class="card group-card g1">
+      <h2><span class="gname">קבוצה 1</span> <span class="count-badge" id="g1-count"></span></h2>
+      <div id="g1-list"></div>
+      <div class="pick-row">
+        <button class="btn btn-pick" id="pick-g1">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg>
+          בחר אדם
+        </button>
+        <button class="btn btn-restart" id="restart-g1">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.5 15a9 9 0 1 1-2-9.4L23 10"/></svg>
+          התחל סבב חדש
+        </button>
+        <div class="picked-display" id="picked-g1"></div>
+      </div>
+    </div>
+    <div class="card group-card g2">
+      <h2><span class="gname">קבוצה 2</span> <span class="count-badge" id="g2-count"></span></h2>
+      <div id="g2-list"></div>
+      <div class="pick-row">
+        <button class="btn btn-pick" id="pick-g2">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg>
+          בחר אדם
+        </button>
+        <button class="btn btn-restart" id="restart-g2">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.5 15a9 9 0 1 1-2-9.4L23 10"/></svg>
+          התחל סבב חדש
+        </button>
+        <div class="picked-display" id="picked-g2"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="again-note">אפשר לערבב מחדש בכל רגע - החלוקה והבחירות מתאפסות.</p>
+</div>
+
+<script>
+const DEFAULT_NAMES = [];
+const LS_KEY = "hagrala_pool_v1";
+const SHUFFLE_MS = 3000;
+
+let pool = loadPool();
+let groups = [[], []];              // arrays of {id, name}
+let picked = [new Set(), new Set()]; // member ids
+let nextId = 1;
+let busy = false;
+let shuffleTimer = null, pickTimer = null;
+
+const $ = id => document.getElementById(id);
+
+function loadPool(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+    if(Array.isArray(saved) && saved.length) return saved;
+  }catch(e){}
+  return [...DEFAULT_NAMES];
+}
+function savePool(){ localStorage.setItem(LS_KEY, JSON.stringify(pool)); }
+
+function renderPool(){
+  const el = $("pool");
+  el.innerHTML = "";
+  if(!pool.length){
+    const d = document.createElement("div");
+    d.className = "pool-empty";
+    d.textContent = "הרשימה ריקה - הוסיפו שמות או ייבאו רשימה מלאה";
+    el.appendChild(d);
+  }
+  pool.forEach((name, i) => {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    const t = document.createElement("span");
+    t.textContent = name;
+    chip.appendChild(t);
+    const x = document.createElement("button");
+    x.textContent = "×";
+    x.title = "הסר " + name;
+    x.onclick = () => { pool.splice(i,1); savePool(); renderPool(); invalidateGroups(); };
+    chip.appendChild(x);
+    el.appendChild(chip);
+  });
+  $("pool-count").textContent = pool.length + " משתתפים";
+  $("shuffle-btn").disabled = busy || pool.length < 2;
+  $("reset-pool").style.display = DEFAULT_NAMES.length ? "" : "none";
+}
+
+function addName(){
+  const input = $("new-name");
+  const v = input.value.trim();
+  if(!v) return;
+  pool.push(v);
+  savePool();
+  input.value = "";
+  renderPool();
+  invalidateGroups();
+}
+
+function importList(){
+  const lines = $("import-text").value.split("\n").map(s => s.trim()).filter(Boolean);
+  if(!lines.length) return;
+  pool = lines;
+  savePool();
+  $("import-text").value = "";
+  $("import-block").style.display = "none";
+  renderPool();
+  invalidateGroups();
+}
+
+// A pool edit makes an existing split stale - clear it.
+function invalidateGroups(){
+  if(shuffleTimer){ clearInterval(shuffleTimer); shuffleTimer = null; }
+  if(pickTimer){ clearInterval(pickTimer); pickTimer = null; }
+  busy = false;
+  groups = [[], []];
+  picked = [new Set(), new Set()];
+  $("groups").style.display = "none";
+  $("shuffle-stage").style.display = "none";
+  $("picked-g1").innerHTML = "";
+  $("picked-g2").innerHTML = "";
+  $("restart-g1").style.display = "none";
+  $("restart-g2").style.display = "none";
+  $("pick-g1").style.display = "";
+  $("pick-g2").style.display = "";
+  $("shuffle-label").textContent = "ערבב וחלק לקבוצות";
+  $("shuffle-btn").disabled = pool.length < 2;
+}
+
+function shuffle(arr){
+  const a = [...arr];
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function splitIntoGroups(){
+  const members = shuffle(pool).map(name => ({id: nextId++, name}));
+  const half = Math.ceil(members.length / 2);
+  let a = members.slice(0, half);
+  let b = members.slice(half);
+  // odd count: randomly decide which group gets the extra member
+  if(members.length % 2 === 1 && Math.random() < 0.5){
+    [a, b] = [b, a];
+  }
+  return [a, b];
+}
+
+function runShuffle(){
+  if(busy || pool.length < 2) return;
+  busy = true;
+  $("shuffle-btn").disabled = true;
+  $("groups").style.display = "none";
+  $("restart-g1").style.display = "none";
+  $("restart-g2").style.display = "none";
+  $("pick-g1").style.display = "";
+  $("pick-g2").style.display = "";
+  const stage = $("shuffle-stage");
+  const chipsBox = $("shuffle-chips");
+  stage.style.display = "block";
+  stage.scrollIntoView({behavior:"smooth", block:"center"});
+
+  const names = [...pool];
+  const tickMs = 90;
+  let elapsed = 0;
+
+  shuffleTimer = setInterval(() => {
+    const order = shuffle(names);
+    chipsBox.innerHTML = "";
+    const hotIdx = Math.floor(Math.random() * order.length);
+    order.forEach((n, i) => {
+      const c = document.createElement("span");
+      c.className = "chip" + (i === hotIdx ? " hot" : "");
+      c.textContent = n;
+      chipsBox.appendChild(c);
+    });
+    elapsed += tickMs;
+    if(elapsed >= SHUFFLE_MS){
+      clearInterval(shuffleTimer);
+      shuffleTimer = null;
+      finishSplit();
+    }
+  }, tickMs);
+}
+
+function finishSplit(){
+  groups = splitIntoGroups();
+  picked = [new Set(), new Set()];
+  $("shuffle-stage").style.display = "none";
+  renderGroup(0);
+  renderGroup(1);
+  $("picked-g1").innerHTML = "";
+  $("picked-g2").innerHTML = "";
+  const g = $("groups");
+  g.style.display = "grid";
+  g.scrollIntoView({behavior:"smooth", block:"start"});
+  $("shuffle-btn").disabled = false;
+  $("shuffle-label").textContent = "ערבב מחדש";
+  busy = false;
+}
+
+function renderGroup(gi){
+  const list = $("g" + (gi+1) + "-list");
+  list.innerHTML = "";
+  const noRepeat = $("no-repeat").checked;
+  groups[gi].forEach((m, i) => {
+    const d = document.createElement("div");
+    const isPicked = picked[gi].has(m.id) && noRepeat;
+    d.className = "member" + (isPicked ? " picked-dim" : "");
+    d.dataset.mid = m.id;
+    d.style.animationDelay = (i * 60) + "ms";
+    const t = document.createElement("span");
+    t.className = "mname";
+    t.textContent = m.name;
+    d.appendChild(t);
+    if(isPicked){
+      // someone who was picked can be returned to the group's eligible pool
+      const r = document.createElement("button");
+      r.className = "mreturn";
+      r.textContent = "החזר לבחירה";
+      r.onclick = () => returnMember(gi, m.id);
+      d.appendChild(r);
+    }
+    list.appendChild(d);
+  });
+  $("g" + (gi+1) + "-count").textContent = groups[gi].length + " משתתפים";
+}
+
+function returnMember(gi, id){
+  picked[gi].delete(id);
+  renderGroup(gi);
+  $("picked-g" + (gi+1)).innerHTML = "";
+  $("restart-g" + (gi+1)).style.display = "none";
+  $("pick-g" + (gi+1)).style.display = "";
+}
+
+function pickFrom(gi){
+  if(busy || !groups[gi].length) return;
+  const noRepeat = $("no-repeat").checked;
+  let candidates = groups[gi];
+  if(noRepeat){
+    candidates = groups[gi].filter(m => !picked[gi].has(m.id));
+    if(!candidates.length) return; // exhausted - restart button is showing
+  }
+  busy = true;
+  const list = $("g" + (gi+1) + "-list");
+  const nodes = [...list.children];
+  const display = $("picked-g" + (gi+1));
+  display.innerHTML = "";
+
+  const cycleMs = 110;
+  const cycles = 12 + Math.floor(Math.random() * 4);
+  let step = 0;
+  pickTimer = setInterval(() => {
+    nodes.forEach(n => n.classList.remove("cycling"));
+    const idx = Math.floor(Math.random() * nodes.length);
+    nodes[idx].classList.add("cycling");
+    step++;
+    if(step >= cycles){
+      clearInterval(pickTimer);
+      pickTimer = null;
+      nodes.forEach(n => n.classList.remove("cycling"));
+      const winner = candidates[Math.floor(Math.random() * candidates.length)];
+      const winnerNode = nodes.find(n => +n.dataset.mid === winner.id);
+      if(winnerNode) winnerNode.classList.add("winner");
+      if(noRepeat) picked[gi].add(winner.id);
+      const remaining = groups[gi].filter(m => !picked[gi].has(m.id)).length;
+      display.innerHTML = "נבחר: <strong></strong>" +
+        (noRepeat ? '<br><span class="done">נותרו ' + remaining + ' שלא נבחרו</span>' : "");
+      display.querySelector("strong").textContent = winner.name;
+      setTimeout(() => {
+        if(winnerNode){
+          winnerNode.classList.remove("winner");
+          if(noRepeat){
+            winnerNode.classList.add("picked-dim");
+            // add a return option on the picked row without full re-render
+            if(!winnerNode.querySelector(".mreturn")){
+              const r = document.createElement("button");
+              r.className = "mreturn";
+              r.textContent = "החזר לבחירה";
+              r.onclick = () => returnMember(gi, winner.id);
+              winnerNode.appendChild(r);
+            }
+          }
+        }
+        if(noRepeat && remaining === 0){
+          // exhausted: show all picked + explicit restart action, no silent reset
+          display.innerHTML = '<span class="done">כל ' + groups[gi].length + ' חברי הקבוצה נבחרו</span>';
+          $("pick-g" + (gi+1)).style.display = "none";
+          $("restart-g" + (gi+1)).style.display = "flex";
+        }
+      }, 2500);
+      busy = false;
+    }
+  }, cycleMs);
+}
+
+function restartRound(gi){
+  picked[gi].clear();
+  renderGroup(gi);
+  $("picked-g" + (gi+1)).innerHTML = "";
+  $("restart-g" + (gi+1)).style.display = "none";
+  $("pick-g" + (gi+1)).style.display = "";
+}
+
+$("add-btn").onclick = addName;
+$("new-name").addEventListener("keydown", e => { if(e.key === "Enter") addName(); });
+$("import-toggle").onclick = () => {
+  const b = $("import-block");
+  b.style.display = b.style.display === "block" ? "none" : "block";
+};
+$("import-cancel").onclick = () => { $("import-block").style.display = "none"; };
+$("import-btn").onclick = importList;
+$("reset-pool").onclick = () => { pool = [...DEFAULT_NAMES]; savePool(); renderPool(); invalidateGroups(); };
+$("shuffle-btn").onclick = runShuffle;
+$("pick-g1").onclick = () => pickFrom(0);
+$("pick-g2").onclick = () => pickFrom(1);
+$("restart-g1").onclick = () => restartRound(0);
+$("restart-g2").onclick = () => restartRound(1);
+$("no-repeat").onchange = () => { renderGroup(0); renderGroup(1); };
+
+renderPool();
+</script>
+</body>
+</html>
