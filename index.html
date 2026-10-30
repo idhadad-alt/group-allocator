@@ -202,6 +202,7 @@
       <button class="btn btn-ghost" id="import-toggle">ייבוא רשימה מלאה</button>
     </div>
   </div>
+  <details id="song-admin" style="max-width:760px;margin:10px auto;display:none"><summary>ניהול שיוכי שירים</summary><textarea id="song-json" style="width:100%;height:80px" placeholder="JSON"></textarea><button id="song-save" class="btn btn-ghost">שמור שיוכי שירים</button></details>
 
   <button class="btn big-action" id="shuffle-btn">
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
@@ -286,7 +287,7 @@ function emptySessionState(){ return { groups: { g1: {}, g2: {} }, picked: { g1:
 function freshState(){
   const bySession = {};
   SESSIONS.forEach(s => { bySession[s.id] = emptySessionState(); });
-  return { roster: [], noRepeat: true, activeSession: SESSIONS[0].id, bySession, transient: null };
+  return { songs: {}, roster: [], noRepeat: true, activeSession: SESSIONS[0].id, bySession, transient: null };
 }
 
 let state = freshState();
@@ -300,6 +301,7 @@ const $ = id => document.getElementById(id);
 
 function normState(raw){
   const s = freshState();
+  if(raw.songs && typeof raw.songs === "object") s.songs = raw.songs;
   if(Array.isArray(raw.roster)) s.roster = raw.roster.filter(x => typeof x === "string");
   else if(raw.roster && typeof raw.roster === "object") s.roster = Object.values(raw.roster).filter(x => typeof x === "string");
   if(typeof raw.noRepeat === "boolean") s.noRepeat = raw.noRepeat;
@@ -389,6 +391,7 @@ function can(action){
 
 /* ================= rendering ================= */
 function renderAll(){
+  $("song-admin").style.display=can("roster")?"":"none";
   renderRoleBar();
   renderSessions();
   renderPool();
@@ -510,19 +513,42 @@ function renderGroup(gi){
 
 function renderPickDisplay(gi){
   const display = $("picked-" + gi);
-  if(exhausted(gi)){
-    display.innerHTML = '<span class="done">כל ' + groupCount(gi) + ' חברי הקבוצה נבחרו</span>';
-    return;
-  }
+  display.innerHTML = "";
   const lpId = cur().lastPick[gi];
   const lpName = lpId && cur().groups[gi][lpId] ? cur().groups[gi][lpId].name : null;
   if(lpName){
-    display.innerHTML = "נבחר: <strong></strong>" +
-      (state.noRepeat ? '<br><span class="done">נותרו ' + remainingOf(gi) + ' שלא נבחרו</span>' : "");
-    display.querySelector("strong").textContent = lpName;
-  }else{
-    display.innerHTML = "";
+    display.append("נבחר: ");
+    const strong=document.createElement("strong"); strong.textContent=lpName; display.append(strong);
+    const song=state.songs[lpName];
+    const line=document.createElement("div");line.style.marginTop="8px";
+    if(song && song.title){
+      if(song.url && /^https:\/\/open\.spotify\.com\/(track\/|search\/)/.test(song.url)){
+        const link=document.createElement("a");link.href=song.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=song.title+" - "+song.artist+(song.pending?" (חיפוש ב-Spotify)":" · Spotify");line.append(link);
+      }else line.textContent=song.title+(song.artist?" - "+song.artist:"")+" · קישור בבדיקה";
+    }else line.textContent="טרם נבחר שיר";
+    display.append(line);
+    if(can("pick")){
+      const row=document.createElement("div");row.style.cssText="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap";
+      const input=document.createElement("input");input.placeholder="שם אחר מתוך הקבוצה";input.style.cssText="min-width:0;flex:1;padding:8px;border:1px solid #ccd8df;border-radius:8px";
+      const button=document.createElement("button");button.className="btn btn-ghost";button.textContent="החלף נבחר";
+      const msg=document.createElement("div");msg.style.cssText="width:100%;font-size:.85rem";
+      button.onclick=()=>manualReplace(gi,lpId,input.value,msg);row.append(input,button,msg);display.append(row);
+    }
   }
+  if(exhausted(gi)){ const d=document.createElement("div");d.className="done";d.textContent="כל "+groupCount(gi)+" חברי הקבוצה נבחרו";display.append(d); }
+}
+function manualReplace(gi,expected,typed,msg){
+  if(!can("pick")||!shared||!db)return;
+  const name=typed.trim();const matches=membersOf(gi).filter(m=>m.name===name);
+  if(matches.length!==1){msg.textContent="יש להקליד שם מדויק של משתתף מתוך קבוצה זו";return;}
+  const target=matches[0].id;if(target===expected){msg.textContent="זה האדם שכבר נבחר";return;}
+  const sid=state.activeSession;
+  db.ref(DB_ROOT+"/bySession/"+sid+"/selection/"+gi).transaction(sel=>{
+    if(!sel)return null;
+    if(sel.lastPick!==expected || (sel.picked&&sel.picked[target]))return;
+    const picked=Object.assign({},sel.picked||{});delete picked[expected];picked[target]=true;
+    return {picked,lastPick:target};
+  },(err,committed)=>{if(err)msg.textContent="ההחלפה נכשלה. נסו שוב";else if(!committed)msg.textContent="הבחירה השתנתה או שהאדם כבר נבחר. רעננו את הבחירה";},false);
 }
 
 /* ================= roster edits (admin) ================= */
@@ -545,7 +571,8 @@ function addName(){
   const v = input.value.trim();
   if(!v) return;
   stopAnims();
-  push(Object.assign({ roster: state.roster.concat([v]) }, clearedSessions()));
+  if(state.roster.includes(v)){ input.value=""; return; }
+  push({ roster: state.roster.concat([v]) });
   input.value = "";
 }
 function importList(){
@@ -857,6 +884,7 @@ function doLogin(){
 function doLogout(){ if(authObj) authObj.signOut(); }
 
 /* ================= wiring ================= */
+$("song-save").onclick=()=>{if(!can("roster"))return;try{const songs=JSON.parse($("song-json").value);if(!songs||Array.isArray(songs)||typeof songs!=="object")throw Error();push({songs});$("song-json").value="";}catch(e){$("sync-note").textContent="נתוני שירים לא תקינים";}};
 $("add-btn").onclick = addName;
 $("new-name").addEventListener("keydown", e => { if(e.key === "Enter") addName(); });
 $("import-toggle").onclick = () => {
